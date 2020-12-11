@@ -70,7 +70,15 @@ end
 @show contiguous(25, list)
 
 nothing
+#= 
+```julia
+julia> @btime invalid(25, list);
+  166.235 μs (526 allocations: 155.34 KiB)
 
+julia> @btime contiguous(25, list);
+  503.429 μs (531 allocations: 163.75 KiB)
+```
+ =#
 # I restart counting with the second counter j every time I step up the
 # first counter i, but that is indeed a waste. I could just subtract the
 # first value in the sublist
