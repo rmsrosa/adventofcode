@@ -13,27 +13,6 @@ test_list = split(test_str, '\n')
 
 list = readlines("day11_input.txt")
 
-function h(list)
-    n, m = length(list), length(list[1])
-    next = fill('.', n+2,m+2)
-    for i in 2:n+1 # looping over all strings
-        for (j, c) in enumerate(list[i-1]) # looping over all chars in a string
-            next[i, j+1] = c
-        end
-    end
-    return next
-end
-
-function f(list)
-    n, m = length(list), length(list[1])
-    extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
-    next = reshape(collect(extended_list[1]), 1, m+2)
-    for line in extended_list[2:end]
-        next = vcat(next, reshape(collect(line), 1, m+2))
-    end
-    return next
-end
-
 function seating(list)
     n, m = length(list), length(list[1])
     extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
@@ -44,7 +23,6 @@ function seating(list)
             next[i, j+1] = c
         end
     end    
-    steps = 0
     while next != previous
         previous = deepcopy(next)
         for j in 2:m+1
@@ -56,17 +34,11 @@ function seating(list)
                 end
             end
         end
-        steps += 1
     end
     return count(==('#'), next)
 end
 
-@show seating(test_list)
-
-@show seating(list)
-
 function seating_longrange(list)
-    regex = r"^\.*#"
     n, m = length(list), length(list[1])
     extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
     previous = fill('.', n+2, m+2)
@@ -75,10 +47,9 @@ function seating_longrange(list)
         for (j, c) in enumerate(list[i-1])
             next[i, j+1] = c
         end
-    end    
-    num_step = 0
+    end
+    regex = r"^\.*#"
     while next != previous
-        num_step += 1
         previous = deepcopy(next)
         for j in 2:m+1
             for i in 2:n+1
@@ -101,15 +72,26 @@ function seating_longrange(list)
             end
         end
     end
-    return sum(count.(==('#'), next))
+    return count(==('#'), next)
 end
 
-@show seating_longrange(test_list)
-#@show seating_longrange(list)
-
+@show seating(test_list)
+@show seating(list)
+@show longrange_test_list = seating_longrange(test_list)
+@show longrange_list = seating_longrange(list)
 @show seating(test_list) == 37
-@show seating_longrange(test_list) == 26
 @show seating(list) == 2296
-#@show seating_longrange(list) == 2089
+@show longrange_test_list == 26
+@show longrange_list == 2089
 
 nothing
+
+# Timings
+
+```julia
+julia> @btime seating(list);
+  120.436 ms (901425 allocations: 114.39 MiB)
+
+julia> @btime seating_longrange(list);
+  19.891 s (45729676 allocations: 3.24 GiB)
+```
