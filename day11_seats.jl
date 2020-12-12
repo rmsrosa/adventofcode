@@ -34,15 +34,41 @@ list = readlines("day11_input.txt")
     end
     return sum(count.(==('#'), next))
 end =#
+function h(list)
+    n, m = length(list), length(list[1])
+    next = fill('.', n+2,m+2)
+    for i in 2:n+1 # looping over all strings
+        for (j, c) in enumerate(list[i-1]) # looping over all chars in a string
+            next[i, j+1] = c
+        end
+    end
+    return next
+end
+
+function f(list)
+    n, m = length(list), length(list[1])
+    extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
+    next = reshape(collect(extended_list[1]), 1, m+2)
+    for line in extended_list[2:end]
+        next = vcat(next, reshape(collect(line), 1, m+2))
+    end
+    return next
+end
 
 function seating(list)
     n, m = length(list), length(list[1])
     extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
     previous = fill('.', n+2, m+2)
-    next = reshape(collect(extended_list[1]), 1, m+2)
+#=     next = reshape(collect(extended_list[1]), 1, m+2)
     for line in extended_list[2:end]
         next = vcat(next, reshape(collect(line), 1, m+2))
-    end
+    end =#
+    next = fill('.', n+2,m+2)
+    for i in 2:n+1
+        for (j, c) in enumerate(list[i-1])
+            next[i, j+1] = c
+        end
+    end    
     steps = 0
     while next != previous
         previous = deepcopy(next)
@@ -101,10 +127,16 @@ function seating_longrange(list)
     n, m = length(list), length(list[1])
     extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
     previous = fill('.', n+2, m+2)
-    next = reshape(collect(extended_list[1]), 1, m+2)
+#=     next = reshape(collect(extended_list[1]), 1, m+2)
     for line in extended_list[2:end]
         next = vcat(next, reshape(collect(line), 1, m+2))
-    end
+    end =#
+    next = fill('.', n+2,m+2)
+    for i in 2:n+1
+        for (j, c) in enumerate(list[i-1])
+            next[i, j+1] = c
+        end
+    end    
     num_step = 0
     while next != previous
         num_step += 1
@@ -128,7 +160,7 @@ function seating_longrange(list)
             end
         end
     end
-    return num_step, sum(count.(==('#'), next))
+    return sum(count.(==('#'), next))
 end
 
 
