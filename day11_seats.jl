@@ -13,7 +13,7 @@ test_list = split(test_str, '\n')
 
 list = readlines("day11_input.txt")
 
-#= function seating(list)
+#= function seating_old(list)
     n, m = length(list), length(list[1])
     extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
     previous = map(line -> reshape(Array(collect(line)), (1,m+2)), fill("."^(m+2), m+2))
@@ -64,11 +64,7 @@ end
 
 @show seating(list)
 
-function longrangeview(i, j, state, previous)
-
-end
-
-function seating_longrange(list)
+#= function seating_longrange_old(list)
     regex = r"^\.*#"
     n, m = length(list), length(list[1])
     extended_list = vcat("."^(m+2), ".".*list.*".", "."^(m+2))
@@ -98,7 +94,7 @@ function seating_longrange(list)
         end
     end
     return num_step, sum(count.(==('#'), next))
-end
+end =#
 
 function seating_longrange(list)
     regex = r"^\.*#"
@@ -137,9 +133,11 @@ end
 
 
 @show seating_longrange(test_list)
-#@show seating_longrange(list)
+@show seating_longrange(list)
 
+@show seating(test_list) == 37
+@show seating_longrange(test_list) == 26
 @show seating(list) == 2296
-# @show seating_lagrange(list) == 2089
+@show seating_longrange(list) == 2089
 
 nothing
