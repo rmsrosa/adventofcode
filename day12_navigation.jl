@@ -104,4 +104,8 @@ julia> @btime navigate_waypoint(list)
   122.945 μs (801 allocations: 38.08 KiB)
 138669
 ```
+
+# P.S.: I could modify part1 `navigate` to treat `heading` like `waypoint`
+# and implement the rotations as done for part1, but I will just leave it
+# like that. 
 =#
