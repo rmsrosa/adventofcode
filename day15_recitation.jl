@@ -9,11 +9,32 @@ function spoken(list, turn)
     last_spoken = spoken_init[end]
     for i=length(spoken_init):turn-1
         if spoken_list[last_spoken+1] == 0
-            spoken_list[last_spoken+1]=i
+            spoken_list[last_spoken+1] = i
             last_spoken = 0            
         else
             difference = i - spoken_list[last_spoken+1]
             spoken_list[last_spoken+1] = i
+            last_spoken = difference
+        end
+    end
+    return last_spoken
+end
+
+# The next Int32 version reduces allocations by half and time 
+function spoken32(list, turn)
+    spoken_init = parse.(Int32,(split(list, ',')))
+    spoken_list = fill(Int32(0), turn -1)
+    for j=1:length(spoken_init)-1
+        spoken_list[spoken_init[j]+1] += Int32(j)
+    end
+    last_spoken = spoken_init[end]
+    for i=length(spoken_init):turn-1
+        if spoken_list[last_spoken+1] == 0
+            spoken_list[last_spoken+1] = Int32(i)
+            last_spoken = 0            
+        else
+            difference = i - spoken_list[last_spoken+1]
+            spoken_list[last_spoken+1] = Int32(i)
             last_spoken = difference
         end
     end
@@ -37,11 +58,16 @@ end
 @show spoken("3,2,1", 30000000) == 18
 @show spoken("3,1,2", 30000000) == 362
 @show spoken("10,16,6,0,1,17", 30000000) == 243
+@show spoken32("10,16,6,0,1,17", 30000000) == 243
 
 #= 
 ```julia
 julia> @btime spoken("10,16,6,0,1,17", 30000000)
-  2.820 s (6 allocations: 228.88 MiB)
+  1.568 s (6 allocations: 228.88 MiB)
+243
+
+julia> @btime spoken32("10,16,6,0,1,17", 30000000)
+  1.328 s (6 allocations: 114.44 MiB)
 243
 ```
  =#
