@@ -11,7 +11,6 @@ function cycle3d(list, cycles)
     width = m+2*cycles+2
     depth = 1+2*cycles+2
     space = fill(false, width, width, depth) # m + 2*cycles (might grow once on both sides at each cycle) + 2 (padding)
-    c₀ = 2 + cycles
     for i in 1:m
         space[1+cycles+i, 2+cycles:m+1+cycles, 2+cycles] = map(==('#'), collect(list[i]))
     end
@@ -24,7 +23,7 @@ function cycle3d(list, cycles)
             for j in 2+cycles-cycle:m+1+cycles+cycle
                 for i in 2+cycles-cycle:m+1+cycles+cycle
                     active = sum(previous_space[i-1:i+1,j-1:j+1,k-1:k+1])
-                    if space[i,j,k] && (active < 3 || active > 4)
+                    if space[i,j,k] && active ∉ [3,4]
                         space[i,j,k] = false
                     elseif !space[i,j,k] && active == 3
                         space[i,j,k] = true
@@ -45,7 +44,6 @@ function cycle4d(list, cycles)
     width = m+2*cycles+2
     depth = 1+2*cycles+2
     space = fill(false, width, width, depth, depth)
-    c₀ = 2 + cycles
     for i in 1:m
         space[1+cycles+i, 2+cycles:m+1+cycles, 2+cycles, 2+cycles] = map(==('#'), collect(list[i]))
     end
@@ -60,7 +58,7 @@ function cycle4d(list, cycles)
                 for j in 2+cycles-cycle:m+1+cycles+cycle
                     for i in 2+cycles-cycle:m+1+cycles+cycle
                         active = sum(previous_space[i-1:i+1,j-1:j+1,k-1:k+1,l-1:l+1])
-                        if space[i,j,k,l] && (active < 3 || active > 4)
+                        if space[i,j,k,l] && active ∉ [3,4]
                             space[i,j,k,l] = false
                         elseif !space[i,j,k,l] && active == 3
                             space[i,j,k,l] = true
@@ -79,6 +77,7 @@ end
 
 nothing
 
+#= 
 ```julia
 julia> @btime cycle3d(list,6)
   1.858 ms (13496 allocations: 1.50 MiB)
@@ -87,3 +86,24 @@ julia> @btime cycle4d(list,6)
   39.148 ms (283334 allocations: 31.09 MiB)
 
 ```
+ =#
+
+function cycle3d_onepass(list, cycles)
+    m = length(list)
+    width = m+2*cycles+2
+    depth = 1+2*cycles+2
+    space = fill(false, width, width, depth) # m + 2*cycles (might grow once on both sides at each cycle) + 2 (padding)
+    for i in 1:m
+        space[1+cycles+i, 2+cycles:m+1+cycles, 2+cycles] = map(==('#'), collect(list[i]))
+    end
+    for cycle in cycles
+        sumxyz = fill(0, width, width, depth)
+        sumxyz[:,:,2:end-1] = space[:,:,3:end] + space[:,:,2:end-1] + space[:,:,1:end-2]
+        sumxyz[:,2:end-1,:] = sumxyz[:,3:end,:] + sumxyz[:,2:end-1,:] + sumxyz[:,1:end-2,:]
+        sumxyz[2:end-1,:,:] = sumxyz[3:end,:,:] + sumxyz[2:end-1,:,:] + sumxyz[1:end-2,:,:]
+        space = map(x -> (x[1] && x[2] ∉ [3,4]) ? false : (!x[1] && x[2] == 3) ? true : x[1], zip(space, sumxyz))
+    end
+    return count(space)
+end
+
+@show cycle3d_onepass(list, cycles) == 310
