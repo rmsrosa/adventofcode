@@ -96,7 +96,7 @@ function cycle3d_onepass(list, cycles)
     for i in 1:m
         space[1+cycles+i, 2+cycles:m+1+cycles, 2+cycles] = map(==('#'), collect(list[i]))
     end
-    for cycle in cycles
+    for cycle = 1:cycles
         sumxyz = fill(0, width, width, depth)
         sumxyz[:,:,2:end-1] = space[:,:,3:end] + space[:,:,2:end-1] + space[:,:,1:end-2]
         sumxyz[:,2:end-1,:] = sumxyz[:,3:end,:] + sumxyz[:,2:end-1,:] + sumxyz[:,1:end-2,:]
@@ -106,4 +106,4 @@ function cycle3d_onepass(list, cycles)
     return count(space)
 end
 
-@show cycle3d_onepass(list, cycles) == 310
+@show cycle3d_onepass(list, 6) == 310
