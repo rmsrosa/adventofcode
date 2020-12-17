@@ -114,19 +114,21 @@ function cycle4d_onepass(list, cycles)
         space[1+cycles+i, 2+cycles:m+1+cycles, 2+cycles, 2+cycles] = 
             map(==('#'), collect(list[i]))
     end
-    sumxyz = fill(0, width, width, depth, depth)
+    sumxyzw = fill(0, width, width, depth, depth)
     for cycle = 1:cycles        
-        sumxyz[:,:,:,2:end-1] = space[:,:,:,3:end] + space[:,:,:,2:end-1] + space[:,:,:,1:end-2]
-        sumxyz[:,:,2:end-1,:] = sumxyz[:,:,3:end,:] + sumxyz[:,:,2:end-1,:] + sumxyz[:,:,1:end-2,:]
-        sumxyz[:,2:end-1,:,:] = sumxyz[:,3:end,:,:] + sumxyz[:,2:end-1,:,:] + sumxyz[:,1:end-2,:,:]
-        sumxyz[2:end-1,:,:,:] = sumxyz[3:end,:,:,:] + sumxyz[2:end-1,:,:,:] + sumxyz[1:end-2,:,:,:]
-        space = map(x -> (x[1] && x[2] ∉ [3,4]) ? false : (!x[1] && x[2] == 3) ? true : x[1], zip(space, sumxyz))
+        sumxyzw[:,:,:,2:end-1] = space[:,:,:,3:end] + space[:,:,:,2:end-1] + space[:,:,:,1:end-2]
+        sumxyzw[:,:,2:end-1,:] = sumxyzw[:,:,3:end,:] + sumxyzw[:,:,2:end-1,:] + sumxyzw[:,:,1:end-2,:]
+        sumxyzw[:,2:end-1,:,:] = sumxyzw[:,3:end,:,:] + sumxyzw[:,2:end-1,:,:] + sumxyzw[:,1:end-2,:,:]
+        sumxyzw[2:end-1,:,:,:] = sumxyzw[3:end,:,:,:] + sumxyzw[2:end-1,:,:,:] + sumxyzw[1:end-2,:,:,:]
+        space = map(x -> (x[1] && x[2] ∉ [3,4]) ? false : (!x[1] && x[2] == 3) ? true : x[1], zip(space, sumxyzw))
     end
     return count(space)
 end
 
 @show cycle3d_onepass(list, 6) == 310
 @show cycle4d_onepass(list, 6) == 2056
+
+nothing
 
 #= 
 #
