@@ -1,6 +1,3 @@
-using CSV
-
-#list = CSV.File("day1_input.txt")
 list = readlines("day1_input.txt")
 
 function get_two(list)
