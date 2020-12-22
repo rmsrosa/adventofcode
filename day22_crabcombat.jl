@@ -42,8 +42,6 @@ end
 @show play_combat(test_list) == 306
 @show play_combat(list) == 32495
 
-encode(deck) = sum([2^(j-1)*deck[j] for j in 1:length(deck)])
-
 function play_recursive_combat(list)
     num_cards = div(length(list)+1, 2) - 2
     decks = fill(0, 2, 2*num_cards)
@@ -56,8 +54,6 @@ function play_recursive_combat(list)
         history2 = Set()
         gamerepeated = false
         while minimum(sum(decks, dims=2)) > 0 && !gamerepeated
-            encoded_deck1 = encode(decks[1,:])
-            encoded_deck2 = encode(decks[2,:])
             if  decks[1,:] ∈ history1 || decks[2,:] ∈ history2
                 gamerepeated = true
                 winner = 1
