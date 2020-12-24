@@ -25,7 +25,7 @@ test_list = split(test_str, '\n')
 
 list = readlines("day24_input.txt")
 
-function count_blacks(list)
+function get_blacks(list)
     blacks = Set()
     for i = 1:length(list)
         steps = list[i]
@@ -43,10 +43,10 @@ function count_blacks(list)
             push!(blacks, position)
         end
     end
-    return length(blacks)
+    return blacks
 end
 
-function count_blacks_int(list)
+function get_blacks_int(list)
     blacks = Set()
     for i = 1:length(list)
         steps = replace(replace(replace(replace(list[i], "ne" => "o"), "nw" => "m"), "se" => "t"), "sw" => "r")
@@ -58,22 +58,22 @@ function count_blacks_int(list)
             push!(blacks, position)
         end
     end
-    return length(blacks)
+    return blacks
 end
 
-@show count_blacks(test_list) == 10
-@show count_blacks(list) == 356
-@show count_blacks_int(test_list) == 10
-@show count_blacks_int(list) == 356
+@show length(get_blacks(test_list)) == 10
+@show length(get_blacks(list)) == 356
+@show length(get_blacks_int(test_list)) == 10
+@show length(get_blacks_int(list)) == 356
 
 #= 
-# Just a slight gain with an integer lattice
+# A slight gain with an integer lattice
 ```julia
-julia> @btime count_blacks(list);
-  1.641 ms (22293 allocations: 1.37 MiB)
+julia> @btime length(count_blacks(list));
+  1.628 ms (22294 allocations: 1.37 MiB)
 
-julia> @btime count_blacks_int(list);
-  1.523 ms (22259 allocations: 1.36 MiB)  
+julia> @btime length(count_blacks_int(list));
+  1.489 ms (22260 allocations: 1.36 MiB) 
 ```
  =#
 
@@ -83,16 +83,7 @@ function count_blacks_moving(list, moves)
         displacements = [[1,0], [1//2,1//2], [1//2,-1//2], [-1,0],[-1//2,-1//2],[-1//2,1//2]]
         return [position .+ displacement for displacement in displacements]
     end
-    for i = 1:length(list)
-        steps = replace(replace(replace(replace(list[i], "ne" => "o"), "nw" => "m"), "se" => "t"), "sw" => "r")
-        position = [count(==('e'), steps) - count(==('w'), steps) + (count(==('o'), steps) + count(==('t'), steps))//2 - (count(==('m'), steps) + count(==('r'), steps))//2
-                    (count(==('o'), steps) + count(==('m'), steps))//2 - (count(==('r'), steps) + count(==('t'), steps))//2]
-        if position ∈ blacks
-            delete!(blacks, position)
-        else
-            push!(blacks, position)
-        end
-    end
+    blacks = get_blacks(list)
     for n = 1:moves
         new_blacks = Set()
         for position in blacks
@@ -118,6 +109,6 @@ nothing
 #= 
 ```julia
 julia> @btime count_blacks_moving(list, 100)
-  11.514 s (19853339 allocations: 1.87 GiB)
+  9.949 s (19853343 allocations: 1.87 GiB)
 ```
  =#
