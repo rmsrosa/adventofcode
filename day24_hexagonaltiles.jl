@@ -25,7 +25,6 @@ test_list = split(test_str, '\n')
 
 list = readlines("day24_input.txt")
 
-
 function count_blacks(list)
     blacks = Set()
     for i = 1:length(list)
@@ -116,8 +115,9 @@ end
 @show count_blacks_moving(list, 100) == 3887
 
 nothing
-
+#= 
 ```julia
 julia> @btime count_blacks_moving(list, 100)
   11.514 s (19853339 allocations: 1.87 GiB)
 ```
+ =#
