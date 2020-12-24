@@ -102,13 +102,43 @@ function count_blacks_moving(list, moves)
     return length(blacks)
 end
 
+function count_blacks_moving_int(list, moves)
+    blacks = Set()
+    function get_neighbors(position)
+        displacements = [[2,0], [1,1], [1,-1], [-2,0],[-1,-1],[-1,1]]
+        return [position .+ displacement for displacement in displacements]
+    end
+    blacks = get_blacks_int(list)
+    for n = 1:moves
+        new_blacks = Set()
+        for position in blacks
+            neighbors = get_neighbors(position)
+            if length(neighbors ∩ blacks) ∈ (1,2)
+                push!(new_blacks, position)
+            end
+            for neighbor in neighbors
+                if neighbor ∉ blacks && length(get_neighbors(neighbor) ∩ blacks) == 2
+                    push!(new_blacks, neighbor)
+                end
+            end
+        end
+        blacks = new_blacks
+    end
+    return length(blacks)
+end
+
 @show count_blacks_moving(test_list, 100) == 2208
 @show count_blacks_moving(list, 100) == 3887
+@show count_blacks_moving_int(test_list, 100) == 2208
+@show count_blacks_moving_int(list, 100) == 3887
 
 nothing
 #= 
 ```julia
 julia> @btime count_blacks_moving(list, 100)
   9.949 s (19853343 allocations: 1.87 GiB)
+
+julia> @btime count_blacks_moving_int(list, 100)
+  6.001 s (17462036 allocations: 1.54 GiB)  
 ```
  =#
