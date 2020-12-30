@@ -115,6 +115,43 @@ test_list = split(test_str, '\n')
 
 list = readlines("day20_input.txt")
 
+"""
+The operators are not always commutative, but when looking for all combinations,
+it suffices to fix the order. Thus, in all what follows, it is assumed that rotations
+are applied first, and then, flips.
+
+In fact:
+    * Commutative:
+        * R0∘FH = FH∘R0 (R0 = identity)
+        * R0∘FV = FV∘R0 (R0 = identity)
+        * R180∘FH = FH∘R180
+        * R180∘FV = FV∘R180
+    * Non-commutative:
+        * R90*FH = FV∘R90 = FH*R270
+        * R90∘FV = FH∘R90 = FV∘R270
+        * R270∘FH = FV∘R270 = FH∘R90
+        * R270∘FV = FH∘R270 = FV∘R90
+
+Notice from the above that there are some redundancies, even fixing the order:
+    * FH∘R0 = FV∘R180
+    * FH∘R90 = FV∘R270
+    * FH∘R180 = FV∘R0
+    * FH∘R270 = FV∘R90
+
+The last three also follow from the first one by repeatedly applying R90 from the right.
+
+From these, we see that we may consider only FH or only FV.
+
+It is easy to deduce the relations above imagining a 2D square, but it is even
+easier in the complex plane, with z=x+iy:
+    * R0 = 1
+    * R90 = multiplication by i
+    * R180 = i^2 = -1
+    * R270 = i^3 = -i
+    * FN = 1
+    * FV = conjugate (z -> z̄ )
+    * FH = z -> -z̄ (in fact z = x+iy -> -x+iy = -(x-iy) = -z̄ ) (i.e. FH∘R0 = FV∘R180)
+"""
 const R0, R90, R180, R270 = Int8.((1, 2, 3, 4))
 const FN, FH, FV = Int8.((1, 2, 3))
 const RIGHT, LEFT, TOP, BOTTOM = Int8.((1, 2, 3, 4))
@@ -133,10 +170,6 @@ function get_side(tile, rotation, flip, side)
     
     The possible flips are `FN`, `FH`, and `FV` for no-flip and horizontal
     and vertical flips, respectively.
-
-    The operators are not always commutative. We have FH∘R90 = R90∘FV and FH∘R270 = R270∘FV, from where we deduce, e.g.
-    R90∘FH = FV∘FH∘R90∘FH = FV∘R90∘FV∘FH = FV∘R90 and FH∘R180 = R90∘FV∘R90 = R180∘FH.
-    In the representation below, it is assumed that rotations are applied first.
 
     The returned side is from left to right, for `top` and `bottom` sides,
     and from top to bottom, for `LEFT` and `RIGHT` sides.
@@ -284,7 +317,7 @@ function attach_tile(n, tableau, tile_key, sides_of_tiles, side_length, flipstep
     new_tableaux = Set()
 
     i, j = divrem(n-1,side_length) .+ (1,1)
-    for r=1:4, f=1:flipstep:3 # rotations and FN and FV flips (if flipstep = 2, skip FH = R180∘FV = FV∘R180, it *should* find some solutions at a much faster pace)
+    for r=1:4, f=1:flipstep:3 # rotations and FN and FV flips (if flipstep = 2, skip FH since FH = FV∘R180)
         side_matches = 0
         for (di, dj, s1, s2) in ((-1, 0, TOP, BOTTOM), (0, -1, LEFT, RIGHT))
             if 1 ≤ i+di ≤ side_length && 1 ≤ j+dj ≤ side_length && tableau[i+di,j+dj] != (0,0,0)
@@ -305,17 +338,25 @@ function attach_tile(n, tableau, tile_key, sides_of_tiles, side_length, flipstep
     return new_tableaux
 end
 
-function solve_jigsaw(list, flipstep=2)
+function solve_jigsaw(list, flipstep=2, all=false)
     sides_of_tiles = collect_sides_tiles(list)
     num_tiles = length(sides_of_tiles)
     side_length = isqrt(num_tiles)
 
     tableaux = Set()
+    if all # This find all solutions accounting for symmetries (eight total)
+        rrange = 1:4
+        frange = 1:flipstep:3 # it suffices to consider FV, may skip FH, which is FV∘R180
+    else # By symmetry, it suffices to put the 1st tile in the original position to find a solution
+        rrange = 1:1
+        frange = 1:1
+    end
     for tk in keys(sides_of_tiles)
-        r=1; f=1 # By symmetry, suffices to put the 1st tile in the original position
-        tableau = fill((0,0,0), side_length, side_length)
-        tableau[1, 1] = (tk, r, f)
-        push!(tableaux, tableau)
+        for r ∈ rrange, f ∈ frange
+            tableau = fill((0,0,0), side_length, side_length)
+            tableau[1, 1] = (tk, r, f)
+            push!(tableaux, tableau)
+        end
     end
     # @info "Starting out with $(length(tableaux)) tableaux"
     for n in 2:num_tiles
@@ -351,8 +392,8 @@ aoc_test_sol = [
 
 # their solution flipped vertically
 aoc_test_sol_FV = [
-    (2971,R0,FN) (1489,R0,FN) (1171,R180,FN); # FV∘R0∘FH = FH∘FV = R180 = R180∘FN
-    (2729,R0,FN) (1427,R0,FN) (2473,R270,FN); # FV∘FH∘R90 = R180∘R90 = R270
+    (2971,R0,FN) (1489,R0,FN) (1171,R180,FN); # FV∘R0∘FH = FH∘FV = R180 = FN∘R180
+    (2729,R0,FN) (1427,R0,FN) (2473,R270,FN); # FV∘FH∘R90 = FV∘FV∘R270 = FN∘R270
     (1951,R0,FN) (2311,R0,FN) (3079,R0,FV);    
 ]
 
@@ -376,8 +417,9 @@ end
 @show solve_jigsaw_combinatorics(test_list, 1)[2] == 20899048083289
 @show solve_jigsaw(test_list, 1)[2] == 20899048083289
 @show aoc_test_sol_FV ∈ solve_jigsaw(test_list, 1)[1]
+@show aoc_test_sol ∈ solve_jigsaw(test_list, 1, true)[1]
+@show length(solve_jigsaw(test_list, 2, true)[1]) == 8
 @show solve_jigsaw(list, 2)[2] == 22878471088273
-
 
 #= 
 ```julia
@@ -397,4 +439,107 @@ julia> @btime solve_jigsaw(list, 2);
   1.312 s (6099477 allocations: 1.05 GiB)
 ``` =#
 
+# Part 2
+
+# One does not need to find all solutions with `all=true` in `solve_jigsaw(list, flipstep=2, all=true)`,
+# it suffices (it is faster) to find just one and then transform this one (i.e. transform 
+# the whole jigsaw.
+function transform(tile, rotation, flip)
+    """
+    First rotate and then flip a tile by the given parameters
+    """
+    side_length = isqrt(length(tile))
+
+    if rotation == R0
+        rotated_tile = copy(tile)
+    elseif rotation == R90
+        rotated_tile = [tile[j, i] for i=1:side_length, j=side_length:-1:1]
+    elseif rotation == R180
+        rotated_tile = [tile[i, j] for i=side_length:-1:1, j=side_length:-1:1]
+    elseif rotation == R270
+        rotated_tile = [tile[j, i] for i=side_length:-1:1, j=1:side_length]
+    end
+
+    if flip == FN
+        transformed_tile = copy(rotated_tile)
+    elseif flip == FH
+        transformed_tile = [tile[i, j] for i=1:side_length, j=side_length:-1:1]
+    elseif flip == FV
+        transformed_tile = [tile[i, j] for i=side_length:-1:1, j=1:side_length]
+    end
+    return transformed_tile
+end
+
+function puzzle_line(list)
+    tiles = collect_tiles(list)
+    num_tiles = length(tiles)
+    isqrt_num_tiles = isqrt(num_tiles)
+    side_length = size(first(tiles)[2])[1]
+
+    monster_msg = split(
+    "                  # 
+    #    ##    ##    ###
+     #  #  #  #  #  #   ", '\n')
+    gap = isqrt_num_tiles*(side_length-2) - length(monster_msg[1])
+    mm_prep = map(x -> x=='#', collect(monster_msg[1] * " "^gap * monster_msg[2] * " "^gap * monster_msg[3]))
+
+    #for solution ∈ unique(solve_jigsaw(list, 1)[1])
+#=     for (n, solution) ∈ enumerate(unique(solve_jigsaw_combinatorics(list, 1)[1]))
+        println("n=$n") =#
+    #begin
+    solutions = unique(solve_jigsaw(list, 2, true)[1])
+    for n=1:length(solutions)
+        @info "Solution $n"
+        solution = solutions[n]
+
+        jigsaw = reshape(
+                    vcat(
+                        [transform(tiles[solution[i,j][1]], solution[i,j][2], solution[i,j][3])[2:end-1,2:end-1]
+                            for i=1:isqrt_num_tiles, j=1:isqrt_num_tiles]...
+                        ), 
+                    (isqrt_num_tiles*(side_length-2),  isqrt_num_tiles*(side_length-2))
+                )
+        
+        len_jigsaw = (isqrt_num_tiles*(side_length-2))^2
+        len_mm_prep = length(mm_prep)
+        for r=1:4, f=1:2:3
+            transformed_jigsaw = transform(jigsaw, r, f)
+            tj_stretched = reshape(transformed_jigsaw, (len_jigsaw, 1))
+
+            for idx=1:len_jigsaw-len_mm_prep+1
+                if tj_stretched[idx:idx+len_mm_prep-1] .* mm_prep == mm_prep
+                    @info "match at idx=$idx with r=$r, f=$f"
+                end
+            end
+        end
+    end
+end
+
+@show puzzle_line(test_list)
+
+#= 
+# Sanity check:
+```julia
+julia> a = fill([0 0; 0 0], 2, 2)
+2×2 Array{Array{Int64,2},2}:
+ [0 0; 0 0]  [0 0; 0 0]
+ [0 0; 0 0]  [0 0; 0 0]
+
+ julia> a[1,1] = [1 0; 0 0];
+
+julia> a[1,2] = [0 1; 0 0];
+
+julia> a[2,1] = [0 0; 1 0];
+
+julia> a[2,2] = [0 0; 0 1];
+
+julia> reshape(vcat([s[i,j] for i=1:2, j=1:2]...), (4,4))
+4×4 Array{Int64,2}:
+ 1  0  0  1
+ 0  0  0  0
+ 0  0  0  0
+ 1  0  0  1
+
+```
+ =#
 nothing
