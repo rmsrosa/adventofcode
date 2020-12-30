@@ -134,6 +134,10 @@ function get_side(tile, rotation, flip, side)
     The possible flips are `FN`, `FH`, and `FV` for no-flip and horizontal
     and vertical flips, respectively.
 
+    The operators are not always commutative. We have FH∘R90 = R90∘FV and FH∘R270 = R270∘FV, from where we deduce, e.g.
+    R90∘FH = FV∘FH∘R90∘FH = FV∘R90∘FV∘FH = FV∘R90 and FH∘R180 = R90∘FV∘R90 = R180∘FH.
+    In the representation below, it is assumed that rotations are applied first.
+
     The returned side is from left to right, for `top` and `bottom` sides,
     and from top to bottom, for `LEFT` and `RIGHT` sides.
     """
@@ -212,7 +216,7 @@ function collect_sides_tiles(list)
     return sides_tiles
 end
 
-function solve_jigsaw_combinatorics(list)
+function solve_jigsaw_combinatorics(list, flipstep=1)
     sides_tiles = collect_sides_tiles(list)
     num_tiles = length(sides_tiles)
     side_length = isqrt(num_tiles)
@@ -224,8 +228,8 @@ function solve_jigsaw_combinatorics(list)
         for p in permutations(c)
             for j in 0:4^side_length-1 # vary orientations for each tile
                 r = digits(j, base=4, pad=side_length) .+ fill(1,side_length)
-                for l in 0:2^side_length-1 # vary flips for each tile, skip FH=R180∘FV=FV∘R180
-                    f = 2*digits(l, base=2, pad=side_length) .+ fill(1,side_length)
+                for l in 0:flipstep:3^side_length-1 # vary flips for each tile, if flipstep=2, skip FH=R180∘FV=FV∘R180, it should find some suitable solutions
+                    f = digits(l, base=3, pad=side_length) .+ fill(1,side_length)
                     matched = true
                     for k in 1:side_length-1
                         if sides_tiles[p[k]][r[k],f[k], 1] !=
@@ -275,12 +279,12 @@ function solve_jigsaw_combinatorics(list)
     end
 end
 
-function attach_tile(n, tableau, tile_key, sides_of_tiles, side_length)
+function attach_tile(n, tableau, tile_key, sides_of_tiles, side_length, flipstep)
     tile_sides = sides_of_tiles[tile_key]
     new_tableaux = Set()
 
     i, j = divrem(n-1,side_length) .+ (1,1)
-    for r=1:4, f=1:2:3 # rotations and flips (skip FH since FH = R180∘FV = FV∘R180)
+    for r=1:4, f=1:flipstep:3 # rotations and FN and FV flips (if flipstep = 2, skip FH = R180∘FV = FV∘R180, it *should* find some solutions at a much faster pace)
         side_matches = 0
         for (di, dj, s1, s2) in ((-1, 0, TOP, BOTTOM), (0, -1, LEFT, RIGHT))
             if 1 ≤ i+di ≤ side_length && 1 ≤ j+dj ≤ side_length && tableau[i+di,j+dj] != (0,0,0)
@@ -301,7 +305,7 @@ function attach_tile(n, tableau, tile_key, sides_of_tiles, side_length)
     return new_tableaux
 end
 
-function solve_jigsaw(list)
+function solve_jigsaw(list, flipstep=2)
     sides_of_tiles = collect_sides_tiles(list)
     num_tiles = length(sides_of_tiles)
     side_length = isqrt(num_tiles)
@@ -319,7 +323,7 @@ function solve_jigsaw(list)
         for tableau in tableaux
             for tk in keys(sides_of_tiles)
                 if tk ∉ Set([k for (k,o) in tableau])
-                    union!(new_tableaux, attach_tile(n, tableau, tk, sides_of_tiles, side_length))
+                    union!(new_tableaux, attach_tile(n, tableau, tk, sides_of_tiles, side_length, flipstep))
                 end
             end
         end       
@@ -338,21 +342,27 @@ function solve_jigsaw(list)
     end
 end
 
-#= 
+# solution given in AoC's page
 aoc_test_sol = [
-    [(1951,R0,FV), (2311,R0,FV), (3079,R0,FN)]
-    [(2729,R0,FV), (1427,R0,FV), (2473,R90,FV)]
-    [(2971,R0,FV), (1489,R0,FV), (1171,R0,FH)]
+    (1951,R0,FV) (2311,R0,FV) (3079,R0,FN);
+    (2729,R0,FV) (1427,R0,FV) (2473,R90,FH);
+    (2971,R0,FV) (1489,R0,FV) (1171,R0,FH);
 ]
-=#
 
-function all_prod_tree(list)
+# their solution flipped vertically
+aoc_test_sol_FV = [
+    (2971,R0,FN) (1489,R0,FN) (1171,R180,FN); # FV∘R0∘FH = FH∘FV = R180 = R180∘FN
+    (2729,R0,FN) (1427,R0,FN) (2473,R270,FN); # FV∘FH∘R90 = R180∘R90 = R270
+    (1951,R0,FN) (2311,R0,FN) (3079,R0,FV);    
+]
+
+function all_prod_tree(list, flipstep=2)
     """
     Return a set with the product of the corners of all solutions.
 
     Aim to check whether all solutions yield the same corner's product.
     """
-    tableaux, = solve_jigsaw(list)
+    tableaux, = solve_jigsaw(list, flipstep)
     prods = Set()
     side_length = isqrt(length(first(tableaux)))
     for tb in tableaux
@@ -363,19 +373,27 @@ function all_prod_tree(list)
     return prods
 end
 
-@show solve_jigsaw_combinatorics(test_list)[2] == 20899048083289
-@show solve_jigsaw(test_list)[2] == 20899048083289
-@show solve_jigsaw(list)[2] == 22878471088273
+@show solve_jigsaw_combinatorics(test_list, 1)[2] == 20899048083289
+@show solve_jigsaw(test_list, 1)[2] == 20899048083289
+@show aoc_test_sol_FV ∈ solve_jigsaw(test_list, 1)[1]
+@show solve_jigsaw(list, 2)[2] == 22878471088273
+
 
 #= 
 ```julia
-julia> @btime solve_jigsaw_combinatorics(test_list);
+julia> @btime solve_jigsaw_combinatorics(test_list, 1); # no skipping FH
+  983.581 ms (8762301 allocations: 498.44 MiB)
+
+julia> @btime solve_jigsaw_combinatorics(test_list, 2); # skipping FH
   181.198 ms (2170275 allocations: 138.39 MiB)
 
-julia> @btime solve_jigsaw(test_list);
+julia> @btime solve_jigsaw(test_list, 1); # no skipping FH
+  803.124 μs (8118 allocations: 505.52 KiB)
+
+julia> @btime solve_jigsaw(test_list, 2); # skipping FH
   626.993 μs (6072 allocations: 443.05 KiB)
 
-julia> @btime solve_jigsaw(list);
+julia> @btime solve_jigsaw(list, 2);
   1.312 s (6099477 allocations: 1.05 GiB)
 ``` =#
 
