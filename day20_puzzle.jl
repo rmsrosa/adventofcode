@@ -386,16 +386,16 @@ end
 # solution given in AoC's page
 aoc_test_sol = [
     (1951,R0,FV) (2311,R0,FV) (3079,R0,FN);
-    (2729,R0,FV) (1427,R0,FV) (2473,R90,FH);
-    (2971,R0,FV) (1489,R0,FV) (1171,R0,FH);
+    (2729,R0,FV) (1427,R0,FV) (2473,R270,FV);
+    (2971,R0,FV) (1489,R0,FV) (1171,R180,FV);
 ]
 
 # their solution flipped vertically
 aoc_test_sol_FV = [
-    (2971,R0,FN) (1489,R0,FN) (1171,R180,FN); # FV∘R0∘FH = FH∘FV = R180 = FN∘R180
-    (2729,R0,FN) (1427,R0,FN) (2473,R270,FN); # FV∘FH∘R90 = FV∘FV∘R270 = FN∘R270
+    (2971,R0,FN) (1489,R0,FN) (1171,R180,FN);
+    (2729,R0,FN) (1427,R0,FN) (2473,R270,FN);
     (1951,R0,FN) (2311,R0,FN) (3079,R0,FV);    
-]
+] 
 
 function all_prod_tree(list, flipstep=2)
     """
@@ -453,69 +453,164 @@ function transform(tile, rotation, flip)
     if rotation == R0
         rotated_tile = copy(tile)
     elseif rotation == R90
-        rotated_tile = [tile[j, i] for i=1:side_length, j=side_length:-1:1]
+        rotated_tile = [tile[j, i] for i=side_length:-1:1, j=1:side_length]
     elseif rotation == R180
         rotated_tile = [tile[i, j] for i=side_length:-1:1, j=side_length:-1:1]
     elseif rotation == R270
-        rotated_tile = [tile[j, i] for i=side_length:-1:1, j=1:side_length]
+        rotated_tile = [tile[j, i] for i=1:side_length, j=side_length:-1:1]
     end
 
     if flip == FN
         transformed_tile = copy(rotated_tile)
     elseif flip == FH
-        transformed_tile = [tile[i, j] for i=1:side_length, j=side_length:-1:1]
+        transformed_tile = [rotated_tile[i, j] for i=1:side_length, j=side_length:-1:1]
     elseif flip == FV
-        transformed_tile = [tile[i, j] for i=side_length:-1:1, j=1:side_length]
+        transformed_tile = [rotated_tile[i, j] for i=side_length:-1:1, j=1:side_length]
     end
     return transformed_tile
 end
 
-function puzzle_line(list)
+function puzzle_roughness(list)
     tiles = collect_tiles(list)
     num_tiles = length(tiles)
     isqrt_num_tiles = isqrt(num_tiles)
     side_length = size(first(tiles)[2])[1]
-
+  
     monster_msg = split(
-    "                  # 
-    #    ##    ##    ###
-     #  #  #  #  #  #   ", '\n')
+"                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   ", '\n')
+    monster_bin = map(x->x=='#', [monster_msg[i][j] for i=1:3, j=1:20])
     gap = isqrt_num_tiles*(side_length-2) - length(monster_msg[1])
     mm_prep = map(x -> x=='#', collect(monster_msg[1] * " "^gap * monster_msg[2] * " "^gap * monster_msg[3]))
 
-    #for solution ∈ unique(solve_jigsaw(list, 1)[1])
-#=     for (n, solution) ∈ enumerate(unique(solve_jigsaw_combinatorics(list, 1)[1]))
-        println("n=$n") =#
-    #begin
-    solutions = unique(solve_jigsaw(list, 2, true)[1])
-    for n=1:length(solutions)
-        @info "Solution $n"
-        solution = solutions[n]
-
-        jigsaw = reshape(
-                    vcat(
-                        [transform(tiles[solution[i,j][1]], solution[i,j][2], solution[i,j][3])[2:end-1,2:end-1]
-                            for i=1:isqrt_num_tiles, j=1:isqrt_num_tiles]...
-                        ), 
-                    (isqrt_num_tiles*(side_length-2),  isqrt_num_tiles*(side_length-2))
+    solution = first(solve_jigsaw(list, 2, false)[1])
+    monster_idx = Set()
+    jigsaw =
+        vcat(
+            [
+                hcat(
+                    [transform(tiles[solution[i,j][1]], solution[i,j][2], solution[i,j][3])[2:end-1,2:end-1]
+                        for j=1:isqrt_num_tiles]...
                 )
-        
-        len_jigsaw = (isqrt_num_tiles*(side_length-2))^2
-        len_mm_prep = length(mm_prep)
-        for r=1:4, f=1:2:3
-            transformed_jigsaw = transform(jigsaw, r, f)
-            tj_stretched = reshape(transformed_jigsaw, (len_jigsaw, 1))
+            for i=1:isqrt_num_tiles]...
+        )
+    
+    isqrt_len_jigsaw = isqrt_num_tiles*(side_length-2)
+    len_jigsaw = isqrt_len_jigsaw^2
 
-            for idx=1:len_jigsaw-len_mm_prep+1
-                if tj_stretched[idx:idx+len_mm_prep-1] .* mm_prep == mm_prep
-                    @info "match at idx=$idx with r=$r, f=$f"
-                end
+    len_mm_prep = length(mm_prep)
+    roughness = 0
+    for r=1:4, f=1:2:3
+        tj = transform(jigsaw, r, f)
+        push!(monster_idx, [(i,j) for i=1:22, j=1:5 if tj[i:i+2, j:j+19].*monster_bin == monster_bin])
+        tj_stretched = reshape(tj, (len_jigsaw, 1))
+        roughness_count = sum(tj_stretched)
+
+        for j=1:isqrt_len_jigsaw-19, i=1:isqrt_len_jigsaw-2
+            if tj[i:i+2, j:j+19].*monster_bin == monster_bin
+                @info "match at (i,j)=($i,$j) with r=$r, f=$f"
+                roughness_count -= sum((monster_bin) .* tj[i:i+2, j:j+19])
             end
         end
+        if roughness_count < sum(tj_stretched)
+            @info "Roughness= $roughness_count"
+            roughness = roughness_count
+        end
     end
+    return roughness
 end
 
-@show puzzle_line(test_list)
+@show puzzle_roughness(test_list) == 273
+@show puzzle_roughness(list) == 1680
+
+
+aoc_test_sol = [
+    (1951,R0,FV) (2311,R0,FV) (3079,R0,FN);
+    (2729,R0,FV) (1427,R0,FV) (2473,R270,FV);
+    (2971,R0,FV) (1489,R0,FV) (1171,R180,FV);
+]
+
+aoc_test_sol_mm = aoc_test_sol_FV_R90 = [ # 
+    (1951,R90,FN) (2729,R270,FN) (2971,R270,FN);
+    (2311,R270,FN) (1427,R270,FN) (1489,R270,FN);
+    (3079,R90,FV) (2473,R0,FN) (1171,R270,FN);
+]
+
+function jigsaw_test(jigsaw_sol, inner = false)
+    offset = inner ? 1 : 0
+    return vcat(
+            [
+            hcat(
+                [transform(tiles[jigsaw_sol[i,j][1]], jigsaw_sol[i,j][2], jigsaw_sol[i,j][3])[1+offset:end-offset,1+offset:end-offset]
+                    for j=1:isqrt_num_tiles]...
+            )
+            for i=1:isqrt_num_tiles]...
+        )
+end
+
+aoc_image_str = 
+".#.#..#.##...#.##..#####
+###....#.#....#..#......
+##.##.###.#.#..######...
+###.#####...#.#####.#..#
+##.#....#.##.####...#.##
+...########.#....#####.#
+....#..#...##..#.#.###..
+.####...#..#.....#......
+#..#.##..#..###.#.##....
+#.####..#.####.#.#.###..
+###.#.#...#.######.#..##
+#.####....##..########.#
+##..##.#...#...#.#.#.#..
+...#..#..#.#.##..###.###
+.#.#....#.##.#...###.##.
+###.#...#..#.##.######..
+.#.#.###.##.##.#..#.##..
+.####.###.#...###.#..#.#
+..#.#..#..#.#.#.####.###
+#..####...#.#.#.###.###.
+#####..#####...###....##
+#.##..#..#...#..####...#
+.#.###..##..##..####.##.
+...###...##...#...#..###"
+
+aoc_image_sol = split(aoc_image_str, '\n')
+
+jigsaw_sol = jigsaw_test(aoc_test_sol, true)
+image_sol = [join(map(x-> x ? '#' : '.', jigsaw_sol[i,:])) for i=1:isqrt(length(jigsaw_sol))]
+
+@show image_sol == aoc_image_sol
+
+transformed_with_sea_monster = 
+".####...#####..#...###..
+#####..#..#.#.####..#.#.
+.#.#...#.###...#.##.O#..
+#.O.##.OO#.#.OO.##.OOO##
+..#O.#O#.O##O..O.#O##.##
+...#.#..##.##...#..#..##
+#.##.#..#.#..#..##.#.#..
+.###.##.....#...###.#...
+#.####.#.#....##.#..#.#.
+##...#..#....#..#...####
+..#.##...###..#.#####..#
+....#.##.#.#####....#...
+..##.##.###.....#.##..#.
+#...#...###..####....##.
+.#.##...#.##.#.#.###...#
+#.###.#..####...##..#...
+#.###...#.##...#.##O###.
+.O##.#OO.###OO##..OOO##.
+..O#.O..O..O.#O##O##.###
+#.#..##.########..#..##.
+#.#####..#.#...##..#....
+#....##..#.#########..##
+#...#.....#..##...###.##
+#..###....##.#...##.##.#"
+
+count(==('#'), transformed_with_sea_monster)
+
+#transform(tiles[1951][2:end-1,2:end-1], 4,3) is the top left tile with mm
 
 #= 
 # Sanity check:
