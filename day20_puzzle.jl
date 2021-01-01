@@ -193,6 +193,18 @@ function get_side(tile, rotation, flip, side)
     end
 end
 
+"""
+    get_encoded_sides(tile)
+
+Return an array with all the integer-encoded sides after all the possible transformations.
+
+The sides of the tile are given as an array with dimensions 12 x 4, 
+representing all 12 transformations (4 rotations x 3 flips) and all 4 sides,
+despite the fact that some transformations are redundant.
+
+Each side is encoded into an integer, i.e. the decimal representation of
+the binary number obtained when translating `"#" => true, "."` => false`.
+"""
 function get_encoded_sides(tile)
     sides = fill(Int16(0),4,3,4) # 4 rotations, 3 flips, 4 sides
     for s=1:4, f=1:3, r=1:4 # s=side, f=flip, r=rotation
@@ -202,37 +214,40 @@ function get_encoded_sides(tile)
     return sides
 end
 
-function collect_tiles(list)
-    """
-    Tiles are collected and translated into binary arrays.
-    
-    According to `"#" => true, "."` => false`.
-    """
+"""
+    get_tiles(list)
+
+Return array with a binary representation of all the tiles in the `list`.
+
+The translation of each tile is done according to `"#" => true, "."` => false`.
+"""
+function get_tiles(list)
     tile_side_length = findfirst(==(""), list) - 2 # discount header and empty line
     num_tiles = div(length(list)+1, tile_side_length+2) # add one since last tile is not followed by empty line
     tiles = Dict()
     tile = fill(false, tile_side_length, tile_side_length)
     for i in 1:num_tiles
         for j=1:tile_side_length
-            # 
             tile[j,:] = map(==('#'), collect(list[(tile_side_length+2)*(i-1)+1+j]))
         end
         push!(tiles, parse(Int, match(r"Tile (\d*):", list[(tile_side_length+2)*(i-1) + 1])[1]) => copy(tile))
     end
-    # @info "$num_tiles tiles collected"
     return tiles
 end
 
-function collect_sides_tiles(list)
-    """
-    Collect the sides of all the tiles.
+"""
+    get_sides_tiles(list)
 
-    The sides of each tile are collected into an array with dimensions 6 x 4, 
-    representing all 6 orientations and all 4 positions.
+Return a Dict with the array of sides of all the tiles.
 
-    Each side is encoded into an integer, i.e. the decimal representation of
-    the binary number obtained when translating `"#" => true, "."` => false`.
-    """
+The sides of each tile are assembled into an array with dimensions 12 x 4, 
+representing all 12 transformations (4 rotations x 3 flips) and all 4 sides,
+despite reduntant transformations.
+
+Each side is encoded into an integer, i.e. the decimal representation of
+the binary number obtained when translating `"#" => true, "."` => false`.
+"""
+function get_sides_tiles(list)
     tile_side_length = findfirst(==(""), list) - 2 # discount header and empty line
     num_tiles = div(length(list)+1, tile_side_length+2) # add one since last tile is not followed by empty line
     sides_tiles = Dict()
@@ -245,16 +260,25 @@ function collect_sides_tiles(list)
         push!(sides_tiles, parse(Int, match(r"Tile (\d*):",
             list[(tile_side_length+2)*(n-1) + 1])[1]) => get_encoded_sides(tile))
     end
-    # @info "Sides of $num_tiles tiles collected"
     return sides_tiles
 end
 
+"""
+solve_jigsaw_combinatorics(list, flipstep=1)
+
+Solve jigsaw by finding all possible horizontal matches and matching them vertically.
+
+It is very expensive computationally. It is feasible for the 3x3 test puzzle
+but not for the 12x12 one.
+
+With `flipstep=2`, it skips the redundant horizontal flip `FH`, while
+if `flipstep=1`, it considers `FH` and `FV`, besides no flip `FN`.
+"""
 function solve_jigsaw_combinatorics(list, flipstep=1)
-    sides_tiles = collect_sides_tiles(list)
+    sides_tiles = get_sides_tiles(list)
     num_tiles = length(sides_tiles)
     side_length = isqrt(num_tiles)
 
-    # @info "There are $(binomial(num_tiles, side_length)) tile combinations for testing horizontal matches"
     horizontal_matches = Set()
     num_matches = 0
     for c in combinations(collect(keys(sides_tiles)), side_length)
@@ -278,9 +302,6 @@ function solve_jigsaw_combinatorics(list, flipstep=1)
             end
         end
     end
-    # @info "Found $(length(horizontal_matches)) horizontal match(es)"
-
-    # @info "There are $(binomial(length(horizontal_matches), side_length)) tile combinations to check for the solution"
 
     solutions = Set()
     for c in combinations(unique(horizontal_matches), side_length)
@@ -302,19 +323,33 @@ function solve_jigsaw_combinatorics(list, flipstep=1)
     end
 
     if length(solutions) == 0
-        # @info "No solution found"
         return nothing, nothing
     else
-        # @info "Found $(length(solutions)) solution(s)"
         corners_product =
             prod([first(solutions)[i][j][1] for i=[1;side_length], j=[1;side_length]])
         return solutions, corners_product
     end
 end
 
+"""
+attach_tile(n, tableau, tile_key, sides_of_tiles, side_length, flipstep)
+
+Return a new set of tableaux with all possible attachments of given tile to the given tableau.
+
+Look for all possible attachments of tile `sides_of_tiles[tile_key]` to the
+given `tableau`.
+
+If `flipstep=2`, it skips the redundant horizontal flip `FH` of the given tile,
+while if `flipstep=1`, all `FN`, `FH` and `FV` are considered.
+
+`n` is the number of tiles already attached to the tableau. It could
+"""
 function attach_tile(n, tableau, tile_key, sides_of_tiles, side_length, flipstep)
     tile_sides = sides_of_tiles[tile_key]
     new_tableaux = Set()
+
+    n = count(!=((0,0,0)), tableau) + 1
+    side_length = size(tableau)[1]
 
     i, j = divrem(n-1,side_length) .+ (1,1)
     for r=1:4, f=1:flipstep:3 # rotations and FN and FV flips (if flipstep = 2, skip FH since FH = FV∘R180)
@@ -339,7 +374,7 @@ function attach_tile(n, tableau, tile_key, sides_of_tiles, side_length, flipstep
 end
 
 function solve_jigsaw(list, flipstep=2, all=false)
-    sides_of_tiles = collect_sides_tiles(list)
+    sides_of_tiles = get_sides_tiles(list)
     num_tiles = length(sides_of_tiles)
     side_length = isqrt(num_tiles)
 
@@ -358,7 +393,6 @@ function solve_jigsaw(list, flipstep=2, all=false)
             push!(tableaux, tableau)
         end
     end
-    # @info "Starting out with $(length(tableaux)) tableaux"
     for n in 2:num_tiles
         new_tableaux = Set()
         for tableau in tableaux
@@ -369,14 +403,11 @@ function solve_jigsaw(list, flipstep=2, all=false)
             end
         end       
         tableaux = copy(new_tableaux)
-        # @info "$(length(tableaux)) matche(s) with $n tiles"
     end
 
     if length(tableaux) == 0
-        # @info "No solution found"
         return nothing, nothing
     else
-        # @info "Found $(length(tableaux)) solution(s)"
         corners_product =
             prod([first(tableaux)[i,j][1] for i=[1;side_length], j=[1;side_length]])
         return tableaux, corners_product
@@ -390,19 +421,21 @@ aoc_test_sol = [
     (2971,R0,FV) (1489,R0,FV) (1171,R180,FV);
 ]
 
-# their solution flipped vertically
+# AoC solution flipped vertically
 aoc_test_sol_FV = [
     (2971,R0,FN) (1489,R0,FN) (1171,R180,FN);
     (2729,R0,FN) (1427,R0,FN) (2473,R270,FN);
     (1951,R0,FN) (2311,R0,FN) (3079,R0,FV);    
 ] 
 
-function all_prod_tree(list, flipstep=2)
-    """
-    Return a set with the product of the corners of all solutions.
+"""
+    all_prod_tree(list, flipstep=2)
 
-    Aim to check whether all solutions yield the same corner's product.
-    """
+Return a set with the product of the corners of all solutions.
+
+Aim to check whether all solutions yield the same corner's product.
+"""
+function all_prod_tree(list, flipstep=2)
     tableaux, = solve_jigsaw(list, flipstep)
     prods = Set()
     side_length = isqrt(length(first(tableaux)))
@@ -444,10 +477,13 @@ julia> @btime solve_jigsaw(list, 2);
 # One does not need to find all solutions with `all=true` in `solve_jigsaw(list, flipstep=2, all=true)`,
 # it suffices (it is faster) to find just one and then transform this one (i.e. transform 
 # the whole jigsaw.
+
+"""
+    transform(tile, rotation, flip)
+
+First rotate and then flip a `tile`, with the given `rotation` and `flip` arguments.
+"""
 function transform(tile, rotation, flip)
-    """
-    First rotate and then flip a tile by the given parameters
-    """
     side_length = isqrt(length(tile))
 
     if rotation == R0
@@ -470,22 +506,24 @@ function transform(tile, rotation, flip)
     return transformed_tile
 end
 
+"""
+    puzzle_roughness(list)
+
+Return the water roughness of the puzzle assembled from the `list` of tiles.
+"""
 function puzzle_roughness(list)
-    tiles = collect_tiles(list)
+    tiles = get_tiles(list)
     num_tiles = length(tiles)
     isqrt_num_tiles = isqrt(num_tiles)
     side_length = size(first(tiles)[2])[1]
   
-    monster_msg = split(
+    monster_str = split(
 "                  # 
 #    ##    ##    ###
  #  #  #  #  #  #   ", '\n')
-    monster_bin = map(x->x=='#', [monster_msg[i][j] for i=1:3, j=1:20])
-    gap = isqrt_num_tiles*(side_length-2) - length(monster_msg[1])
-    mm_prep = map(x -> x=='#', collect(monster_msg[1] * " "^gap * monster_msg[2] * " "^gap * monster_msg[3]))
+    monster_bitarray = map(x->x=='#', [monster_str[i][j] for i=1:3, j=1:20])
 
     solution = first(solve_jigsaw(list, 2, false)[1])
-    monster_idx = Set()
     jigsaw =
         vcat(
             [
@@ -499,46 +537,36 @@ function puzzle_roughness(list)
     isqrt_len_jigsaw = isqrt_num_tiles*(side_length-2)
     len_jigsaw = isqrt_len_jigsaw^2
 
-    len_mm_prep = length(mm_prep)
-    roughness = 0
     for r=1:4, f=1:2:3
         tj = transform(jigsaw, r, f)
-        push!(monster_idx, [(i,j) for i=1:22, j=1:5 if tj[i:i+2, j:j+19].*monster_bin == monster_bin])
         tj_stretched = reshape(tj, (len_jigsaw, 1))
-        roughness_count = sum(tj_stretched)
+        roughness = sum(tj)
 
         for j=1:isqrt_len_jigsaw-19, i=1:isqrt_len_jigsaw-2
-            if tj[i:i+2, j:j+19].*monster_bin == monster_bin
-                @info "match at (i,j)=($i,$j) with r=$r, f=$f"
-                roughness_count -= sum((monster_bin) .* tj[i:i+2, j:j+19])
+            if tj[i:i+2, j:j+19].*monster_bitarray == monster_bitarray
+                roughness -= sum((monster_bitarray) .* tj[i:i+2, j:j+19])
             end
         end
-        if roughness_count < sum(tj_stretched)
-            @info "Roughness= $roughness_count"
-            roughness = roughness_count
+        if roughness < sum(tj)
+            return roughness
         end
     end
-    return roughness
+    return nothing
 end
 
 @show puzzle_roughness(test_list) == 273
 @show puzzle_roughness(list) == 1680
 
-
-aoc_test_sol = [
-    (1951,R0,FV) (2311,R0,FV) (3079,R0,FN);
-    (2729,R0,FV) (1427,R0,FV) (2473,R270,FV);
-    (2971,R0,FV) (1489,R0,FV) (1171,R180,FV);
-]
-
-aoc_test_sol_mm = aoc_test_sol_FV_R90 = [ # 
+aoc_test_sol_mm = [ # = aoc_test_sol_FV_R90 position of the test puzzle found with the sea monster
     (1951,R90,FN) (2729,R270,FN) (2971,R270,FN);
     (2311,R270,FN) (1427,R270,FN) (1489,R270,FN);
     (3079,R90,FV) (2473,R0,FN) (1171,R270,FN);
 ]
 
-function jigsaw_test(jigsaw_sol, inner = false)
+function jigsaw_test(list, jigsaw_sol, inner = false)
+    tiles = get_tiles(list)
     offset = inner ? 1 : 0
+    isqrt_num_tiles = isqrt(length(tiles))
     return vcat(
             [
             hcat(
@@ -577,7 +605,7 @@ aoc_image_str =
 
 aoc_image_sol = split(aoc_image_str, '\n')
 
-jigsaw_sol = jigsaw_test(aoc_test_sol, true)
+jigsaw_sol = jigsaw_test(test_list, aoc_test_sol, true)
 image_sol = [join(map(x-> x ? '#' : '.', jigsaw_sol[i,:])) for i=1:isqrt(length(jigsaw_sol))]
 
 @show image_sol == aoc_image_sol
@@ -608,33 +636,6 @@ transformed_with_sea_monster =
 #...#.....#..##...###.##
 #..###....##.#...##.##.#"
 
-count(==('#'), transformed_with_sea_monster)
+# count(==('#'), transformed_with_sea_monster)
 
-#transform(tiles[1951][2:end-1,2:end-1], 4,3) is the top left tile with mm
-
-#= 
-# Sanity check:
-```julia
-julia> a = fill([0 0; 0 0], 2, 2)
-2×2 Array{Array{Int64,2},2}:
- [0 0; 0 0]  [0 0; 0 0]
- [0 0; 0 0]  [0 0; 0 0]
-
- julia> a[1,1] = [1 0; 0 0];
-
-julia> a[1,2] = [0 1; 0 0];
-
-julia> a[2,1] = [0 0; 1 0];
-
-julia> a[2,2] = [0 0; 0 1];
-
-julia> reshape(vcat([s[i,j] for i=1:2, j=1:2]...), (4,4))
-4×4 Array{Int64,2}:
- 1  0  0  1
- 0  0  0  0
- 0  0  0  0
- 1  0  0  1
-
-```
- =#
 nothing
