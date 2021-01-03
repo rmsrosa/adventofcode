@@ -6,6 +6,6 @@ All done with [The Julia Programming Language](https://julialang.org/) (version 
 
 I used [VSCode](https://code.visualstudio.com), with the [Julia Language extension](https://marketplace.visualstudio.com/items?itemName=julialang.language-julia).
 
-Nice discussions along the way with the nice people at the [Humans of Julia](https://discord.com/invite/C5h9D4j) server on [Discord](https://discord.com), over the channels `#advent-of-code` and `#aoc-spoilers`.
+Helpful discussions along the way with the nice people at the [Humans of Julia](https://discord.com/invite/C5h9D4j) server on [Discord](https://discord.com), over the channels `#advent-of-code` and `#aoc-spoilers`.
 
 All code here is distributed under the [MIT License](LICENSE).
