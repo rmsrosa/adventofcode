@@ -35,3 +35,21 @@ g(l) = count(sum(@view(l[n+1:n+3])) > sum(@view(l[n:n+2])) for n in 1:length(l)-
 @info "Challenge successful?: $(g(list) == 1683)"
 
 @btime g($list)
+
+# Code golfing
+
+res = parse.(Int, readlines("day1_input.txt")) |> l -> count(l[n+3] > l[n] for n in 1:length(l)-3)
+@info "Code golfing success?: $(res == 1683)"
+
+# Performance
+
+function h(list)
+    s = 0
+    for j in 1:lastindex(list)-3
+        @inbounds s += ifelse(list[j+3] > list[j], 1, 0)
+    end
+    return s
+end
+
+@info "Performance"
+@btime h($list)
