@@ -53,4 +53,22 @@ end
 @info "challenge:"
 @show part2(list_str) == 1963088820
 
+# Alternative
+
+forward(k) = [0, k]
+up(k) = [-k, 0]
+down(k) = [k, 0]
+
+function part1_alt(list)
+    commands = [split(cmd) |> u -> (Symbol(first(u)), parse(Int, last(u))) for cmd in list]
+    return prod(mapreduce(u -> eval(first(u))(last(u)), +, commands))
+end
+
+@info "Part 1 alt"
+@info "test:"
+@show part1_alt(list_test_str) == 150
+@info "challenge:" 
+@show part1_alt(list_str) == 1714680
+
 nothing
+
