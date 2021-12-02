@@ -17,7 +17,7 @@ function part1(list)
     depth = 0
     pos = 0
     for cmd in list
-        m, k = split(cmd, ' ')
+        m, k = split(cmd)
         k = parse(Int, k)
         pos += m == "forward" ? k : 0
         depth += m == "up" ? -k : m == "down" ? k : 0
@@ -38,7 +38,7 @@ function part2(list)
     pos = 0
     aim = 0
     for cmd in list
-        m, k = split(cmd, ' ')
+        m, k = split(cmd)
         k = parse(Int, k)
         pos += m == "forward" ? k : 0
         depth += m == "forward" ? aim * k : 0
