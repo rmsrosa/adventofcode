@@ -55,7 +55,9 @@ end
 
 # Alternative
 
-forward(k) = [0, k]
+# Part 1
+
+forward(k) = [0, k] # depth and pos
 up(k) = [-k, 0]
 down(k) = [k, 0]
 
@@ -69,6 +71,41 @@ end
 @show part1_alt(list_test_str) == 150
 @info "challenge:" 
 @show part1_alt(list_str) == 1714680
+
+# Part 2
+
+function forward!(u, k)
+    u[1] += u[3] * k
+    u[2] += k
+end
+function up!(u, k)
+    u[3] -= k
+end
+function down!(u, k)
+    u[3] += k
+end
+
+function part2_alt2(list)
+    u = [0, 0, 0]
+    for l in list
+        cmd = l[1]
+        k = parse(Int, l[end])
+        if cmd == 'f'
+            forward!(u, k)
+        elseif cmd == 'u'
+            up!(u, k)
+        else
+            down!(u, k)
+        end
+    end
+    return u[1] * u[2]
+end
+
+@info "Part 2 alt"
+@info "test:"
+@show part2_alt2(list_test_str) == 900
+@info "challenge:" 
+@show part2_alt2(list_str) == 1963088820
 
 nothing
 
