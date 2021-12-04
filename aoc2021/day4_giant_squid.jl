@@ -106,4 +106,87 @@ end
 @info "test:"
 @show part2(list_test_str) == 1924
 @info "challenge:" 
-@show part2(list_str) !== nothing
+@show part2(list_str) !== 24742
+
+# Splitting up things
+
+function init(list)
+    numbers = parse.(Int, split(list[1], ','))
+    num_boards = div(length(list) - 1, 6)
+    boards = [Matrix{Int}(undef, 5, 5) for _ in 1:num_boards]
+    masks = [BitMatrix(zeros(Bool, 5, 5)) for _ in 1:num_boards]
+
+    for k in 1:num_boards
+        for i in 1:5
+            boards[k][i, :] .= parse.(Int, split(list[2 + 6 * (k - 1) + i]))
+        end
+    end
+    return numbers, boards, masks
+end
+
+function part1!(numbers, boards, masks)
+    num_boards = length(boards)
+    round = 0
+    winner = 0
+    @inbounds while winner == 0
+        round += 1
+        n = numbers[round]
+        for k in 1:num_boards
+            masks[k] .|= boards[k] .== n
+            for i in 1:5
+                if all(@view(masks[k][i,:])) || all(@view(masks[k][:,i]))
+                    winner = k
+                end
+            end
+        end
+    end
+
+    return numbers[round] * sum((!).(masks[winner]) .* boards[winner])
+end
+
+function part2!(numbers, boards, masks)
+    num_boards = length(boards)
+    round = 0
+    winners = Int[]
+    @inbounds while length(winners) < num_boards
+        round += 1
+        n = numbers[round]
+        for k in 1:num_boards
+            masks[k] .|= boards[k] .== n
+            if k ∉ winners
+                for i in 1:5
+                    if all(@view(masks[k][i,:])) || all(@view(masks[k][:,i]))
+                        push!(winners, k)
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    return numbers[round] * sum((!).(masks[winners[end]]) .* boards[winners[end]])
+end
+
+@info "Part 1 - splitted"
+@info "test:"
+numbers, boards, masks = init(list_test_str)
+@show part1!(numbers, boards, masks) == 4512
+@info "challenge:"
+numbers, boards, masks = init(list_str)
+@show part1!(numbers, boards, masks) == 10374
+
+@info "Part 2 - splitted"
+@info "test:"
+numbers, boards, masks = init(list_test_str)
+@show part2!(numbers, boards, masks) == 1924
+@info "challenge:" 
+numbers, boards, masks = init(list_str)
+@show part2!(numbers, boards, masks) == 24742
+
+@info "Benchmarks"
+@info "Init"
+@btime init($list_str);
+@info "Part 1"
+@btime part1!(args...) setup = (args = init(list_str))
+@info "Part 2"
+@btime part2!(args...) setup = (args = init(list_str))
