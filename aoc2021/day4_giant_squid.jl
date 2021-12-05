@@ -106,7 +106,7 @@ end
 @info "test:"
 @show part2(list_test_str) == 1924
 @info "challenge:" 
-@show part2(list_str) !== 24742
+@show part2(list_str) == 24742
 
 # Splitting up things
 
@@ -187,6 +187,6 @@ numbers, boards, masks = init(list_str)
 @info "Init"
 @btime init($list_str);
 @info "Part 1"
-@btime part1!(args...) setup = (args = init(list_str))
+@btime part1!($numbers, b, m) setup=(b=boards; m=masks) evals=1
 @info "Part 2"
-@btime part2!(args...) setup = (args = init(list_str))
+@btime part2!($numbers, b, m) setup=(b=boards; m=masks) evals=1
