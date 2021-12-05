@@ -17,17 +17,15 @@ list_str = readlines("day5_input.txt")
 # Part 1
 
 function part1(list)
-    v = []
-    for l in list
+    vents = Matrix{Int}(undef, length(list), 4)
+    for (i,l) in enumerate(list)
         m = match(r"(\d+)\,(\d+)\s..\s(\d+)\,(\d+)", l)
-        p = parse.(Int, m.captures) .+ 1
-        push!(v, p')
+        vents[i, :] .= parse.(Int, m.captures) .+ 1
     end
-    mat = reduce(vcat, v)
-    xmax = maximum(@view(mat[:, [1,3]]))
-    ymax = maximum(@view(mat[:, [2,4]]))
+    xmax = maximum(@view(vents[:, [1,3]]))
+    ymax = maximum(@view(vents[:, [2,4]]))
     diagram = zeros(Int, ymax, xmax)
-    for row in eachrow(mat)
+    for row in eachrow(vents)
         if row[1] == row[3]
             s = sign(row[4] - row[2])
             diagram[row[2]:s:row[4], row[1]] .+= 1
@@ -58,17 +56,15 @@ end
 # Part 2
 
 function part2(list)
-    v = []
-    for l in list
+    vents = Matrix{Int}(undef, length(list), 4)
+    for (i,l) in enumerate(list)
         m = match(r"(\d+)\,(\d+)\s..\s(\d+)\,(\d+)", l)
-        p = parse.(Int, m.captures) .+ 1
-        push!(v, p')
+        vents[i, :] .= parse.(Int, m.captures) .+ 1
     end
-    mat = reduce(vcat, v)
-    xmax = maximum(@view(mat[:, [1,3]]))
-    ymax = maximum(@view(mat[:, [2,4]]))
+    xmax = maximum(@view(vents[:, [1,3]]))
+    ymax = maximum(@view(vents[:, [2,4]]))
     diagram = zeros(Int, ymax, xmax)
-    for row in eachrow(mat)
+    for row in eachrow(vents)
         if row[1] == row[3]
             s = sign(row[4] - row[2])
             diagram[row[2]:s:row[4], row[1]] .+= 1
