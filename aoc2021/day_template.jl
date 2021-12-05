@@ -11,10 +11,20 @@ function part1(list)
 end
 
 @info "Part 1"
-@info "test:"
-@show part1(list_test_str) !== nothing
-@info "challenge:" 
-@show part1(list_str) !== nothing
+let result = part1(list_test_str)
+    if result == 0
+        @info "Test successful, with result $result"
+    else
+        @warn "Test failed, with result $result"
+    end
+end
+let result = part1(list_str)
+    if result == 0
+        @info "Challenge successful, with result $result"
+    else
+        @warn "Challenge failed, with result $result"
+    end
+end
 
 # Part 2
 
@@ -22,7 +32,17 @@ function part2(list)
 end
 
 @info "Part 2"
-@info "test:"
-@show part2(list_test_str) !== nothing
-@info "challenge:" 
-@show part2(list_str) !== nothing
+let result = part2(list_test_str)
+    if result == 0
+        @info "Test successful, with result $result"
+    else
+        @warn "Test failed, with result $result"
+    end
+end
+let result = part2(list_str)
+    if result == 0
+        @info "Challenge successful, with result $result"
+    else
+        @warn "Challenge failed, with result $result"
+    end
+end
