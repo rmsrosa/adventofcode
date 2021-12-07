@@ -3,46 +3,33 @@ list_test_str = split(
 '\n'
 )
 
-list_str = readlines("day_input.txt")
+let input = "day_input.txt"
+    isfile(input) && (list_str = readlines(input))
+end
+
+# Test function
+
+function testit(name, result, check = (args...) -> false)
+    if check(result)
+        @info "$name successful, with result $result"
+    else
+        @warn "$name failed, with result $result"
+    end
+end
 
 # Part 1
 
 function part1(list)
 end
 
-@info "Part 1"
-let result = part1(list_test_str)
-    if result == 0
-        @info "Test successful, with result $result"
-    else
-        @warn "Test failed, with result $result"
-    end
-end
-let result = part1(list_str)
-    if result == 0
-        @info "Challenge successful, with result $result"
-    else
-        @warn "Challenge failed, with result $result"
-    end
-end
+testit("Test Part 1", part1(list_test_str), ==(0))
+testit("Challenge Part 1", part1(list_str), ==(0))
 
 # Part 2
 
 function part2(list)
 end
 
-@info "Part 2"
-let result = part2(list_test_str)
-    if result == 0
-        @info "Test successful, with result $result"
-    else
-        @warn "Test failed, with result $result"
-    end
-end
-let result = part2(list_str)
-    if result == 0
-        @info "Challenge successful, with result $result"
-    else
-        @warn "Challenge failed, with result $result"
-    end
-end
+testit("Test Part 2", part2(list_test_str), ==(0))
+testit("Challenge Part 2", part2(list_str), ==(0))
+
