@@ -3,7 +3,7 @@ list_test_str = split(
 '\n'
 )
 
-let input = "day7_input.txt"
+let input = "day_input.txt"
     list_str = isfile(input) ? readlines(input) : list_test_str
 end
 
