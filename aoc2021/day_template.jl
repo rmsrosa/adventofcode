@@ -3,8 +3,8 @@ list_test_str = split(
 '\n'
 )
 
-let input = "day_input.txt"
-    list_str = isfile(input) ? readlines(input) : list_test_str
+list_str = let input = "day_input.txt"
+    isfile(input) ? readlines(input) : list_test_str
 end
 
 # Test function
