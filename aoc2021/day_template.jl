@@ -3,7 +3,7 @@ list_test_str = split(
 '\n'
 )
 
-list_str = let input = "day_input.txt"
+list_str = let input = @__DIR__() * "day_input.txt"
     isfile(input) ? readlines(input) : list_test_str
 end
 
