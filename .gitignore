@@ -25,3 +25,5 @@ Manifest.toml
 
 # RRosa: these should not be uploaded:
 othercodes/
+
+.vscode/
