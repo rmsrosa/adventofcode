@@ -6,9 +6,9 @@
 
 #* The fastest I could get for each check, by translating the set of 252 instructions to a pure julia function (actually a bit less due to some no-ops or redundancies), was about 20 nanoseconds on a new Mac M1, which would lead to a total of 120 hours.
 
-#* The actual solution for part 1 has `9` as the first digit and `1` as the second, which means I would actually "just" need to check (going down each digit from `9` to `1`) 9^13 digits before finding the solution, but that still amounts to 14 hours. The second part would take much longer, because the natural path is to start from `1`, but the actual solution turned out to also have `9` as the first digit.
+#* The actual solution for part 1 has `9` as the first digit and `1` as the second, which means I would actually "just" need to check (going down each digit from `9` to `1`) 9^13 digits before finding the solution, but that still amounts to 14 hours. The second part would take much longer, because the natural path is to start from `1`, but the actual solution turned out to also have `9` as the first digit, which would leads us to 100+ hours.
 
-#* I could have just waited, but that would be no fun and it would require running the code on my machine for days, eating up resources, and without actually knowing it would work. So, we need some sort of dynamic programming to break this down. The problem is that things get messy quickly. Let us get to it.
+#* I could have just waited, but that would be no fun and it would require running the code on my machine for days, eating up resources, and without actually knowing it would work. So, we need some sort of dynamic programming to break this down. The problem is that things get messy quickly. But let us get to it.
 
 #* ## The puzzle
 
@@ -20,21 +20,21 @@
 
 #* In my case, the input instructions are always of the form `inp w`, i.e.always reading to variable `w`. And the equality check appears in sequence, always `eql x w` followed by `eql x 0`. In effect, this is to check whether `x ≠ w` and store the result in `x` as `0` or `1`, i.e. the two equality boil down to a single `x = 1 * (x ≠ w)` instruction. Knowing that helps to simplify stuff.
 
-#* Given a set of 14 input data, the sequence of operations leads to a final value for the variables `w`, `x`, `y`, and `z`. But the challenge is not to compute the result for a given input. The challenge, in part 1, is to find the largest valid input. A *valid* input is one which ends with `z = 0`.
+#* Given a set of 14 input data, the sequence of operations leads to a final value for the variables `w`, `x`, `y`, and `z`. But the challenge is not to compute the result for a given input. The challenge, in part 1, is to find the largest valid input. A *valid* input is one which ends with `z = 0`. The second part is to find the smallest valid input.
 
 #* ## The approach to solve it
 
-#* The naive approach would be to start with the highest possible input `9999999999999`, down to the smallest one `11111111111111`, stopping at the first valid input. As explained in the Introdution, this would take a rather long time.
+#* The naive approach would be to start with the highest possible input `9999999999999`, down to the smallest one `11111111111111`, computing the final values of the variables `w`, `x`, `y`, `z`, and stopping at the first valid input (`w == 0`). As explained in the Introdution, this would take a rather long time.
 
 #* So we need somehow to keep the input as unknowns and track the conditions that lead to `w = 0` at the end.
 
-#* The way I thought for solving this was to use symbolic computation. The right package for that seemed to be `Symbolics.jl`. But this is still in its early stages. It is not complete. It does accept `mod` and `rem`, but there is no `div`. And, worst, there is no simplification implemented for `mod` and `rem`. I decided to have a look at it and see how I could add them. It turned out `Symbolics.jl` uses `SymbolicUtils.jl` under the hood, and it is there where the simplification magic occurs. It is in `SymbolicUtils.jl` that this core stuff is/should be implemented.
+#* The way I thought for solving this was to use symbolic computation. The right package for that seemed at first to be `Symbolics.jl`. But this is still in its early stages. It is not complete. It does accept `mod` and `rem`, but there is no `div`. And, worst, there is no simplification implemented for `mod` and `rem`. I decided to have a look at it and see how I could add them. It turned out `Symbolics.jl` uses `SymbolicUtils.jl` under the hood, and it is there where the simplification magic occurs. It is in `SymbolicUtils.jl` that this core stuff is/should be implemented.
 
 #* I looked at the code of `SymbolicUtils.jl` and it seemed not too difficult to implement what I needed. After checking with the developers on Slack, I went ahead and started to make this happen. This became PR [JuliaSymbolics/SymbolicUtils.jl PR: adds div and simplifications for div, mod and rem #418](https://github.com/JuliaSymbolics/SymbolicUtils.jl/pull/418).
 
-#* This PR adds `div` and adds a bunch of simplification rules for them, like `div(x, 1) = x`, `mod(x, 1) = 0`, `div(x, -1) = -x`, `mod(x, -1) = 0`, `div(n * x, m) = div(n, m) * x + div(x - div(n, m) * x, m)`, and so one.
+#* This PR adds `div` and adds a bunch of simplification rules for `div`, `mod`, and `rem`, like `div(x, 1) = x`, `mod(x, 1) = 0`, `div(x, -1) = -x`, `mod(x, -1) = 0`, `div(n * x, m) = div(n, m) * x + div(x - div(n, m) * x, m)`, and so one.
 
-#* This, however, is still not enough. The symbolic expressions stored in the variables still become gigantic and unmannable. We need more simplifications.
+#* This, however, is still not enough to crack the puzzle. The symbolic expressions stored in the variables still become gigantic and unmannable. We need more simplifications.
 
 #* The last piece of symbolics, then, is to take advantage of the fact that the input is between `1` and `9` and that, at least in my case, the `div` and `mod` operations come either dividing by `1` (which the implemented rules above take care) or by `26`. Hence, something like `div(n + i, m)` is zero when `i` is an unkown input data between `1` and `9`, `0 ≤ rem(n, m) ≤ m - 9`, and `m = 26`. Similarly, `mod(i + n, m)` reduces to `mod(n, m) + i`.
 
@@ -44,11 +44,11 @@
 
 #* With that at hand, for each given operation, we apply the simplifications to reduce the expressions, and go on.
 
-#* The dynamic programming part comes when one of the equality operations yield two possible outcomes (1 or 0, i.e. true or false), depending on the data. When this happen, we branch the code, one for each possibility, keeping track of the condition taken.
+#* The dynamic programming part comes when one of the equality operations yield two possible outcomes (1 or 0, i.e. true or false), depending on the input data. When this happens, we branch the code, one for each possibility, keeping track of the conditions taken.
 
 #* At the end, we check whether `w = 0` or not. If not, we return `nothing` and the branch is discarded. If `w = 0`, the set of conditions for that corresponding branch is returned.
 
-#* It could happen that more than one set of conditions are valid, but it turns out there is only one valid combination. This comes out as a set of linear equations involving the 14 input data. We this set of conditions at hand, we look for the highest (for part 1) or lowest (for part 2) combination satisfying the conditions. These are the solutions.
+#* It could happen that more than one set of conditions are valid, but it turns out there is only one valid combination. This comes out as a set of linear equations involving the 14 input data. With this set of conditions at hand, we look for the highest (for part 1) or lowest (for part 2) combination satisfying the conditions. These are the solutions.
 
 #* ## The implementation
 
@@ -118,9 +118,9 @@ r = Chain([
 
 srs = r ∘ simplify
 
-#* Perusing the data, we see, by the fourth of fifth input, that there will be a branch depending on the data. More precisely, the value of `x` will be either `0` or `i`, depending on the difference between two previous input and a given integer in the instructions. This will have further branches later on. Hence, we will need some form of dynamic programming structure to keep track of that. We will keep a simple nested vector of vectors structure for that, so we can simply push! new branches to it.
+#* Perusing the commands, we see, by the fourth of fifth input, that there will be a branch depending on the data. More precisely, the value of `x` will be either `0` or `i`, depending on the difference between two previous input and a given integer in the instructions. This will have further branches later on. Hence, we will need some form of dynamic programming structure to keep track of that.
 
-#* We define a vector of Symbolic integers. In the challenge, there will be 14 integer inputs, but it makes no effect writing i[1:14].
+#* We define a vector of Symbolic integers. In the challenge, there will be 14 integer inputs, but it makes no effect writing i[1:14] (this works in `Symbolics.jl`, but not in `SymbolicUtils.jl`).
 
 #* All four variables start with 0.
 
@@ -201,13 +201,13 @@ conditions = solve(list)
 
 #= 
 Result:
- "(i3 - 7) == i4"
- "(1 + i5) == i6"
- "(5 + i8) == i9"
- "i10 == i11"
- "(8 + i7) == i12"
- "(7 + i2) == i13"
- "(i1 - 8) == i14"
+ (i3 - 7) == i4
+ (1 + i5) == i6
+ (5 + i8) == i9
+ i10 == i11
+ (8 + i7) == i12
+ (7 + i2) == i13
+ (i1 - 8) == i14
 
 The largest possible solution of this system gives us the answer to part 1:
 92928914999991
